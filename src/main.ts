@@ -3,40 +3,13 @@ import { Renderer } from './core/renderer';
 import { createControls } from './core/controls';
 import { StoreScene } from './scene/store/storeScene';
 import { applyStoreCamera, updateStoreFov } from './scene/store/storeCamera';
-import { TestScene } from './scene/testScene';
-import * as THREE from 'three';
 
 const canvas = document.getElementById('scene') as HTMLCanvasElement;
-const showCube = new URLSearchParams(window.location.search).get('escena') === 'cubo';
 
 const camera = new Camera();
 const renderer = new Renderer(canvas);
 
-configureSwitchLink();
-
-if (showCube) {
-  runCube();
-} else {
-  runStore();
-}
-
-function runCube(): void {
-  const testScene = new TestScene();
-
-  function animate(): void {
-    requestAnimationFrame(animate);
-    testScene.animate();
-    renderer.renderer.render(testScene.scene, camera.camera);
-  }
-
-  function onResize() {
-    camera.resize();
-    renderer.resize();
-  }
-
-  window.addEventListener('resize', onResize);
-  animate();
-}
+runStore();
 
 function runStore(): void {
   let store: StoreScene;
@@ -84,15 +57,6 @@ function runStore(): void {
   });
 
   animate(performance.now());
-}
-
-function configureSwitchLink(): void {
-  const link = document.getElementById('switch-scene') as HTMLAnchorElement | null;
-  if (!link) {
-    return;
-  }
-  link.href = showCube ? window.location.pathname : `${window.location.pathname}?escena=cubo`;
-  link.textContent = showCube ? 'Ver tienda' : 'Ver cubo de prueba';
 }
 
 function showError(message: string): void {

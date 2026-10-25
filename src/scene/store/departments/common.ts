@@ -10,10 +10,12 @@ export function zonePatch(
   w: number,
   d: number,
 ): void {
-  b.box(material, w, 0.014, d, cx, 0.007, cz);
+  const baseY = 0.027;
+  const edgeY = 0.037;
+  b.box(material, w, 0.014, d, cx, baseY, cz);
   const edge = 0.07;
-  b.box(m.red, w, 0.006, edge, cx, 0.017, cz - d / 2 + edge / 2);
-  b.box(m.red, w, 0.006, edge, cx, 0.017, cz + d / 2 - edge / 2);
-  b.box(m.red, edge, 0.006, d - edge * 2, cx - w / 2 + edge / 2, 0.017, cz);
-  b.box(m.red, edge, 0.006, d - edge * 2, cx + w / 2 - edge / 2, 0.017, cz);
+  b.box(m.red, w, 0.006, edge, cx, edgeY, cz - d / 2 + edge / 2);
+  b.box(m.red, w, 0.006, edge, cx, edgeY, cz + d / 2 - edge / 2);
+  b.box(m.red, edge, 0.006, d - edge * 2, cx - w / 2 + edge / 2, edgeY, cz);
+  b.box(m.red, edge, 0.006, d - edge * 2, cx + w / 2 - edge / 2, edgeY, cz);
 }

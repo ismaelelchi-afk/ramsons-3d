@@ -130,7 +130,7 @@ function buildEntrance({ batch: b, mats: m, signage }: StoreContext): void {
   b.box(m.graphite, 13, 0.14, 2.6, 0, 4.33, D + T + 1.3);
   signage.textPlane('RAMSONS 3D', 'textWhite', 0, 5.2, D + T + 0.122, 9, 1.1);
   // Cara interior del dintel (visible al girar hacia la salida).
-  signage.textPlane('GRACIAS POR SU VISITA', 'white', 0, 5.3, D - 0.002, 6, 0.7, Math.PI);
+  signage.textPlane('GRACIAS POR SU VISITA', 'white', 0, 5.3, D - 0.015, 6, 0.7, Math.PI);
 }
 
 function buildCeiling({ batch: b, mats: m }: StoreContext): void {
@@ -160,6 +160,6 @@ function buildPillars({ batch: b, mats: m }: StoreContext): void {
 /** Líneas rojas de suelo que enmarcan el pasillo central y refuerzan la perspectiva. */
 function buildAisleGuides({ batch: b, mats: m }: StoreContext): void {
   for (const side of [-1, 1]) {
-    b.box(m.red, 0.12, 0.012, 51, side * 4.2, 0.006, -0.5);
+    b.box(m.red, 0.12, 0.012, 51, side * 4.2, 0.026, -0.5);
   }
 }

@@ -41,10 +41,10 @@ export function drawTv(b: StaticBatch, m: Materials, o: TvOptions): void {
 
   const screenMaterial =
     o.screen !== undefined && o.screen >= 0 ? m.screenDemo[o.screen % m.screenDemo.length] : m.screenOff;
-  b.box(screenMaterial, w - 0.03, h - 0.03, 0.003, 0, lift + h / 2, depth / 2 + 0.0012);
+  b.box(screenMaterial, w - 0.03, h - 0.03, 0.003, 0, lift + h / 2, depth / 2 + 0.005);
 
   // Pequeña barra de marca genérica en el marco inferior.
-  b.box(m.silver, w * 0.05, 0.005, 0.004, 0, lift + 0.011, depth / 2 + 0.001);
+  b.box(m.silver, w * 0.05, 0.005, 0.004, 0, lift + 0.011, depth / 2 + 0.005);
 }
 
 // ---------------------------------------------------------------- audio
@@ -95,8 +95,8 @@ export function drawPhone(b: StaticBatch, m: Materials, o: PhoneOptions): void {
     0,
     () => {
       b.box(bodyMaterial, w, h, t, 0, h / 2, 0);
-      b.box(m.screenDemo[o.screen % m.screenDemo.length], w - 0.008, h - 0.014, 0.002, 0, h / 2, t / 2 + 0.0008);
-      b.box(m.screenOff, 0.014, 0.005, 0.002, 0, h - 0.012, t / 2 + 0.0018);
+      b.box(m.screenDemo[o.screen % m.screenDemo.length], w - 0.008, h - 0.014, 0.002, 0, h / 2, t / 2 + 0.005);
+      b.box(m.screenOff, 0.014, 0.005, 0.002, 0, h - 0.012, t / 2 + 0.006);
     },
     0,
     -0.22,
@@ -128,7 +128,7 @@ export function drawLaptop(b: StaticBatch, m: Materials, o: LaptopOptions): void
     0,
     () => {
       b.box(shell, w, 0.25, 0.008, 0, 0.125, 0);
-      b.box(m.screenDemo[o.screen % m.screenDemo.length], w - 0.026, 0.226, 0.002, 0, 0.126, 0.0045);
+      b.box(m.screenDemo[o.screen % m.screenDemo.length], w - 0.026, 0.226, 0.002, 0, 0.126, 0.009);
     },
     -0.26,
   );
@@ -150,7 +150,7 @@ export function drawMonitor(b: StaticBatch, m: Materials, o: { w: number; screen
     0.002,
     0,
     panelBottom + h / 2,
-    0.0151,
+    0.019,
   );
 }
 

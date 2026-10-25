@@ -71,7 +71,7 @@ export class Signage {
     const b = this.batch;
     const depth = 0.12;
     b.box(this.mats.graphite, w, h, depth, x, y, z);
-    this.textPlane(label, style, x, y, z + depth / 2 + 0.002, w - 0.1, h - 0.1);
+    this.textPlane(label, style, x, y, z + depth / 2 + 0.015, w - 0.1, h - 0.1);
 
     const rodLength = STORE.height - (y + h / 2);
     for (const side of [-1, 1]) {

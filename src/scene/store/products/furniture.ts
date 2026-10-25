@@ -235,7 +235,7 @@ export function drawPlant(b: StaticBatch, m: Materials, o: { scale: number }): v
 }
 
 export function drawRug(b: StaticBatch, m: Materials, o: { w: number; d: number; red?: boolean }): void {
-  b.box(o.red ? m.rugRed : m.rugGray, o.w, 0.012, o.d, 0, 0.006, 0);
+  b.box(o.red ? m.rugRed : m.rugGray, o.w, 0.012, o.d, 0, 0.026, 0);
 }
 
 export function drawPriceTag(b: StaticBatch, m: Materials): void {

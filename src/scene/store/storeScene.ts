@@ -64,7 +64,6 @@ export class StoreScene {
     this.scene.add(createStoreLights());
   }
 
-  /** La tienda es estática; existe para compartir la interfaz con TestScene. */
   animate(): void {}
 
   dispose(): void {
