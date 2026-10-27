@@ -30,3 +30,5 @@ coverage/
 
 # TypeScript cache
 *.tsbuildinfo
+# Notas locales
+leeme.txt
