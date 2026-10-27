@@ -1,6 +1,13 @@
 import * as THREE from 'three';
 import { STORE } from '../scene/store/constants';
 
+export interface ControlOptions {
+  /** Mientras devuelva true se ignoran cámara, joystick y botones. */
+  isBlocked?: () => boolean;
+  /** Toque/clic corto sobre la escena (no arrastre) en coordenadas de pantalla. */
+  onTap?: (clientX: number, clientY: number) => void;
+}
+
 export interface FreeControls {
   update(delta: number): void;
   dispose(): void;
@@ -14,6 +21,8 @@ const LOOK_SMOOTH = 16;
 const MAX_PITCH = 1.45;
 const JOY_DEADZONE = 0.12;
 const KNOB_TRAVEL = 0.6;
+const TAP_MAX_MOVE = 8;
+const TAP_MAX_DURATION = 600;
 
 const MARGIN = 0.5;
 const MIN_X = -STORE.halfW + STORE.wallThickness + MARGIN;
@@ -32,6 +41,7 @@ function clamp(value: number, min: number, max: number): number {
 export function createControls(
   camera: THREE.PerspectiveCamera,
   renderer: THREE.WebGLRenderer,
+  options: ControlOptions = {},
 ): FreeControls {
   camera.rotation.order = 'YXZ';
 
@@ -75,12 +85,20 @@ export function createControls(
   let lookPointer: number | null = null;
   let lookX = 0;
   let lookY = 0;
+  let tapStartX = 0;
+  let tapStartY = 0;
+  let tapStartTime = 0;
+  let tapMoved = false;
 
   lookLayer.addEventListener('pointerdown', (event) => {
-    if (lookPointer !== null) return;
+    if (options.isBlocked?.() || lookPointer !== null) return;
     lookPointer = event.pointerId;
     lookX = event.clientX;
     lookY = event.clientY;
+    tapStartX = event.clientX;
+    tapStartY = event.clientY;
+    tapStartTime = performance.now();
+    tapMoved = false;
     lookLayer.setPointerCapture(event.pointerId);
   });
 
@@ -90,6 +108,13 @@ export function createControls(
     const dy = event.clientY - lookY;
     lookX = event.clientX;
     lookY = event.clientY;
+    if (
+      Math.abs(event.clientX - tapStartX) > TAP_MAX_MOVE ||
+      Math.abs(event.clientY - tapStartY) > TAP_MAX_MOVE
+    ) {
+      tapMoved = true;
+    }
+    if (options.isBlocked?.()) return;
     targetYaw -= dx * LOOK_SENSITIVITY;
     targetPitch = clamp(targetPitch - dy * LOOK_SENSITIVITY, -MAX_PITCH, MAX_PITCH);
   });
@@ -98,7 +123,16 @@ export function createControls(
     if (event.pointerId !== lookPointer) return;
     lookPointer = null;
   }
-  lookLayer.addEventListener('pointerup', endLook);
+
+  lookLayer.addEventListener('pointerup', (event) => {
+    if (event.pointerId !== lookPointer) return;
+    const duration = performance.now() - tapStartTime;
+    const shouldTap = !tapMoved && duration <= TAP_MAX_DURATION && !options.isBlocked?.();
+    endLook(event);
+    if (shouldTap) {
+      options.onTap?.(event.clientX, event.clientY);
+    }
+  });
   lookLayer.addEventListener('pointercancel', endLook);
 
   let joyPointer: number | null = null;
@@ -123,7 +157,7 @@ export function createControls(
   }
 
   joystick.addEventListener('pointerdown', (event) => {
-    if (joyPointer !== null) return;
+    if (options.isBlocked?.() || joyPointer !== null) return;
     event.stopPropagation();
     const rect = joystick.getBoundingClientRect();
     joyCenterX = rect.left + rect.width / 2;
@@ -151,6 +185,7 @@ export function createControls(
 
   function bindHold(element: HTMLElement, setHeld: (held: boolean) => void): void {
     element.addEventListener('pointerdown', (event) => {
+      if (options.isBlocked?.()) return;
       event.stopPropagation();
       element.setPointerCapture(event.pointerId);
       setHeld(true);
@@ -172,6 +207,15 @@ export function createControls(
   }
 
   function update(delta: number): void {
+    if (options.isBlocked?.()) {
+      velocity.set(0, 0, 0);
+      moveX = 0;
+      moveZ = 0;
+      upHeld = false;
+      downHeld = false;
+      return;
+    }
+
     const dt = Math.min(delta, 0.1);
 
     const lookK = 1 - Math.exp(-LOOK_SMOOTH * dt);

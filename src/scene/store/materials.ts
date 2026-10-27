@@ -28,12 +28,26 @@ export function createMaterials() {
     material.name = name;
     return material;
   };
+  const lambertOverlay = (color: number, name: string): THREE.MeshLambertMaterial => {
+    const material = lambert(color, name);
+    material.polygonOffset = true;
+    material.polygonOffsetFactor = -1;
+    material.polygonOffsetUnits = -2;
+    return material;
+  };
 
   const floorMap = createFloorTileTexture(
     (STORE.halfW * 2) / STORE.tileSize,
     (STORE.halfD * 2) / STORE.tileSize,
   );
-  const floor = new THREE.MeshStandardMaterial({ map: floorMap, roughness: 0.42, metalness: 0 });
+  const floor = new THREE.MeshStandardMaterial({
+    map: floorMap,
+    roughness: 0.42,
+    metalness: 0,
+    polygonOffset: true,
+    polygonOffsetFactor: 1,
+    polygonOffsetUnits: 2,
+  });
   floor.name = 'floor';
 
   const screenDemo = [
@@ -116,8 +130,8 @@ export function createMaterials() {
     blanketGray: lambert(0x9aa2ac, 'blanketGray'),
     blanketBeige: lambert(0xe0d4bf, 'blanketBeige'),
     blanketCharcoal: lambert(0x4f545c, 'blanketCharcoal'),
-    rugGray: lambert(0xc9ccd0, 'rugGray'),
-    rugRed: lambert(0xc92b3a, 'rugRed'),
+    rugGray: lambertOverlay(0xc9ccd0, 'rugGray'),
+    rugRed: lambertOverlay(0xc92b3a, 'rugRed'),
     mattressWhite: lambert(0xf4f2ec, 'mattressWhite'),
     mattressGray: lambert(0xd5d8dc, 'mattressGray'),
     mattressCream: lambert(0xeadfc8, 'mattressCream'),

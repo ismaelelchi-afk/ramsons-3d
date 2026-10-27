@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import type { StaticBatch } from '../batch';
 import type { Materials } from '../materials';
 
@@ -16,11 +17,28 @@ export interface TvOptions {
   mount: 'wall' | 'stand';
   /** Índice de pantalla de demostración, o -1 para pantalla apagada. */
   screen?: number;
+  /** Identificador estable del catálogo (solo para selección, no cambia la geometría). */
+  specId?: string;
 }
 
 export function tvSize(inches: number): { w: number; h: number } {
   const diagonal = inches * 0.0254;
   return { w: diagonal * 0.8716, h: diagonal * 0.4903 };
+}
+
+/**
+ * Caja envolvente local (sin transformar) que ocupa el panel de un televisor.
+ * Se usa para crear una hit box invisible de selección sin separar la geometría
+ * fusionada del `StaticBatch`.
+ */
+export function tvLocalBounds(o: TvOptions): THREE.Box3 {
+  const { w, h } = tvSize(o.inches);
+  const standLift = o.inches === 55 ? 0.06984 : 0.09;
+  const lift = o.mount === 'stand' ? standLift : 0;
+  const box = new THREE.Box3();
+  box.min.set(-w / 2, lift, -0.06);
+  box.max.set(w / 2, lift + h, 0.05);
+  return box;
 }
 
 export function drawTv(b: StaticBatch, m: Materials, o: TvOptions): void {
@@ -36,7 +54,12 @@ export function drawTv(b: StaticBatch, m: Materials, o: TvOptions): void {
   }
 
   // Cuerpo con marco fino y abultamiento trasero.
-  b.box(m.plastic, w, h, depth, 0, lift + h / 2, 0);
+  const frame = 0.015;
+  b.box(m.plastic, w, frame, depth, 0, lift + h - frame / 2, 0);
+  b.box(m.plastic, w, frame, depth, 0, lift + frame / 2, 0);
+  b.box(m.plastic, frame, h - frame * 2, depth, -(w - frame) / 2, lift + h / 2, 0);
+  b.box(m.plastic, frame, h - frame * 2, depth, (w - frame) / 2, lift + h / 2, 0);
+  b.box(m.plastic, w - frame * 2, h - frame * 2, 0.005, 0, lift + h / 2, -depth / 2 + 0.0025);
   b.box(m.plasticSoft, w * 0.5, h * 0.55, 0.035, 0, lift + h / 2, -depth / 2 - 0.0175);
 
   const screenMaterial =
@@ -52,7 +75,7 @@ export function drawTv(b: StaticBatch, m: Materials, o: TvOptions): void {
 export function drawSoundbar(b: StaticBatch, m: Materials, o: { w: number }): void {
   b.box(m.plastic, o.w, 0.065, 0.1, 0, 0.0325, 0);
   b.box(m.plasticSoft, o.w - 0.04, 0.045, 0.003, 0, 0.0325, 0.0515);
-  b.box(m.ledBlue, 0.012, 0.006, 0.003, o.w / 2 - 0.05, 0.05, 0.052);
+  b.box(m.ledBlue, 0.012, 0.006, 0.003, o.w / 2 - 0.05, 0.05, 0.055);
 }
 
 export function drawSpeaker(b: StaticBatch, m: Materials, o: { h: number }): void {

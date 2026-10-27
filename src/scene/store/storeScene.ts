@@ -12,10 +12,13 @@ import { buildCeilingFixtures, createStoreLights } from './lighting';
 import { ProductLibrary } from './library';
 import { createMaterials, disposeMaterials, type Materials } from './materials';
 import { Signage } from './signage';
+import type { Tv55Asset } from '../../ui/tv/tv55Assets';
 
 export interface StoreSceneOptions {
   /** Registra cajas envolventes por primitiva (solo para verificación automática). */
   trackBounds?: boolean;
+  /** Recurso del modelo realista de 55"; si falta se usa el dibujo procedural. */
+  tv55Asset?: Tv55Asset | null;
 }
 
 /**
@@ -39,7 +42,7 @@ export class StoreScene {
 
     this.mats = createMaterials();
     this.batch = new StaticBatch(options.trackBounds === true);
-    this.products = new ProductLibrary(this.batch, this.mats);
+    this.products = new ProductLibrary(this.batch, this.mats, options.tv55Asset ?? null);
     this.signage = new Signage(this.batch, this.mats);
 
     const ctx: StoreContext = {
@@ -64,7 +67,14 @@ export class StoreScene {
     this.scene.add(createStoreLights());
   }
 
-  animate(): void {}
+  animate(now = performance.now()): void {
+    this.products.animate(now);
+  }
+
+  /** Devuelve el `specId` del televisor apuntado por el rayo, o `null`. */
+  pickTv(ray: THREE.Ray): string | null {
+    return this.products.pickTv(ray);
+  }
 
   dispose(): void {
     this.scene.traverse((object) => {
@@ -72,6 +82,7 @@ export class StoreScene {
         object.geometry.dispose();
       }
     });
+    this.products.dispose();
     this.signage.dispose();
     disposeMaterials(this.mats);
   }

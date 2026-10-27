@@ -34,8 +34,8 @@ function buildSideWalls({ batch: b, mats: m }: StoreContext): void {
   for (const side of [-1, 1]) {
     b.box(m.wall, T, WALL_H, D * 2 + T * 2, side * (W + T / 2), WALL_H / 2, 0);
     // Zócalo grafito y cenefa roja corrida.
-    b.box(m.graphite, 0.04, 0.14, D * 2, side * (W - 0.02), 0.07, 0);
-    b.box(m.red, 0.03, 0.18, D * 2, side * (W - 0.015), 4.95, 0);
+    b.box(m.graphite, 0.04, 0.14, D * 2 - 0.04, side * (W - 0.02), 0.07, 0.02);
+    b.box(m.red, 0.03, 0.18, D * 2 - 0.035, side * (W - 0.02), 4.95, 0.0175);
   }
 }
 
@@ -45,17 +45,18 @@ function buildBackWall({ batch: b, mats: m, signage }: StoreContext): void {
   // Zócalo y cenefa a ambos lados del panel central.
   for (const side of [-1, 1]) {
     b.box(m.graphite, 15, 0.14, 0.04, side * 12.5, 0.07, -D + 0.02);
-    b.box(m.red, 15, 0.18, 0.03, side * 12.5, 4.95, -D + 0.015);
+    b.box(m.red, 15, 0.18, 0.03, side * 12.5, 4.95, -D + 0.02);
   }
 
   // Panel rojo central al fondo del pasillo, con la identificación provisional.
-  b.box(m.red, 10, 5.9, 0.1, 0, 2.95, -D + 0.05);
+  // Se mantienen las caras frontales y se separan 1 cm las traseras del muro.
+  b.box(m.red, 10, 5.9, 0.09, 0, 2.95, -D + 0.055);
   for (const side of [-1, 1]) {
-    b.box(m.graphite, 0.2, 5.95, 0.14, side * 5.1, 2.975, -D + 0.07);
+    b.box(m.graphite, 0.2, 5.95, 0.13, side * 5.1, 2.975, -D + 0.075);
   }
-  b.box(m.graphite, 10, 0.14, 0.12, 0, 0.07, -D + 0.06);
-  signage.textPlane('RAMSONS 3D', 'textWhite', 0, 3.9, -D + 0.102, 8.6, 1.6);
-  signage.textPlane('TECNOLOGÍA Y HOGAR', 'textWhite', 0, 2.55, -D + 0.102, 6.2, 0.6);
+  b.box(m.graphite, 10, 0.14, 0.11, 0, 0.07, -D + 0.065);
+  signage.textPlane('RAMSONS 3D', 'textWhite', 0, 3.9, -D + 0.13, 8.6, 1.6);
+  signage.textPlane('TECNOLOGÍA Y HOGAR', 'textWhite', 0, 2.55, -D + 0.13, 6.2, 0.6);
 }
 
 function buildFrontWall({ batch: b, mats: m }: StoreContext): void {

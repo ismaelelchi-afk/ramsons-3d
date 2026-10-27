@@ -180,7 +180,7 @@ export function drawBookshelf(b: StaticBatch, m: Materials, o: { w: number; seed
   b.box(m.woodDark, o.w - 0.06, h, 0.01, 0, h / 2, -d / 2 + 0.005);
   const levels = [0.04, 0.4, 0.76, 1.12, 1.48, h - 0.02];
   for (const y of levels) {
-    b.box(m.woodLight, o.w, 0.03, d, 0, y, 0);
+    b.box(m.woodLight, o.w - 0.06, 0.03, d, 0, y, 0);
   }
   for (let level = 0; level < levels.length - 1; level += 1) {
     const base = (levels[level] as number) + 0.015;
@@ -235,7 +235,7 @@ export function drawPlant(b: StaticBatch, m: Materials, o: { scale: number }): v
 }
 
 export function drawRug(b: StaticBatch, m: Materials, o: { w: number; d: number; red?: boolean }): void {
-  b.box(o.red ? m.rugRed : m.rugGray, o.w, 0.012, o.d, 0, 0.026, 0);
+  b.box(o.red ? m.rugRed : m.rugGray, o.w, 0.012, o.d, 0, 0.0405, 0);
 }
 
 export function drawPriceTag(b: StaticBatch, m: Materials): void {
@@ -247,7 +247,7 @@ export function drawPriceTag(b: StaticBatch, m: Materials): void {
     0,
     () => {
       b.box(m.tagWhite, 0.14, 0.085, 0.006, 0, 0.0425, 0);
-      b.box(m.red, 0.14, 0.024, 0.0066, 0, 0.073, 0);
+      b.box(m.red, 0.14, 0.024, 0.0066, 0, 0.073, 0.005);
     },
     -0.3,
   );

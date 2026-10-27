@@ -24,6 +24,7 @@ import {
   drawSpeaker,
   drawTower,
   drawTv,
+  tvLocalBounds,
   type LaptopOptions,
   type PhoneOptions,
   type TvOptions,
@@ -44,6 +45,12 @@ import {
   type BedOptions,
   type SofaOptions,
 } from './products/furniture';
+import {
+  createWallTv32Resource,
+  type WallTv32Resource,
+} from './products/wallTv';
+import { Tv55Resource } from './products/tv55';
+import type { Tv55Asset } from '../../ui/tv/tv55Assets';
 
 /**
  * Catálogo de productos provisionales.
@@ -100,6 +107,12 @@ export interface Placement {
   ry?: number;
 }
 
+/** Hit box invisible de un televisor, en coordenadas de mundo. */
+export interface TvHit {
+  specId: string;
+  box: THREE.Box3;
+}
+
 type Drawers = {
   [K in ProductKind]: (b: StaticBatch, m: Materials, options: ProductOptionsMap[K]) => void;
 };
@@ -143,14 +156,25 @@ type OptionsArgs<K extends ProductKind> = ProductOptionsMap[K] extends undefined
 export class ProductLibrary {
   /** Objetos sueltos que sustituyen a productos geométricos (p. ej. modelos GLB). */
   public readonly overrides = new THREE.Group();
+  /** Hit boxes de los televisores creados (coordenadas de mundo). */
+  public readonly tvHits: TvHit[] = [];
 
   private readonly batch: StaticBatch;
   private readonly materials: Materials;
   private readonly factories = new Map<ProductKind, (options: unknown) => THREE.Object3D>();
+  private wallTv32: WallTv32Resource | null | undefined;
+  private tv55Asset: Tv55Asset | null;
+  private tv55: Tv55Resource | null = null;
+  private tv55Unavailable = false;
 
-  constructor(batch: StaticBatch, materials: Materials) {
+  constructor(
+    batch: StaticBatch,
+    materials: Materials,
+    tv55Asset: Tv55Asset | null = null,
+  ) {
     this.batch = batch;
     this.materials = materials;
+    this.tv55Asset = tv55Asset;
     this.overrides.name = 'productos-sustituidos';
   }
 
@@ -178,7 +202,89 @@ export class ProductLibrary {
       return;
     }
 
+    let realisticWallTv = false;
+    let realisticTv55 = false;
+    if (kind === 'tv') {
+      const tvOptions = options as TvOptions;
+      if (tvOptions.specId) {
+        const box = tvLocalBounds(tvOptions).applyMatrix4(this.batch.worldMatrix(x, y, z, ry));
+        this.tvHits.push({ specId: tvOptions.specId, box });
+      }
+      realisticWallTv = tvOptions.inches === 32 && tvOptions.mount === 'wall';
+      realisticTv55 = tvOptions.inches === 55;
+    }
+
+    if (realisticWallTv) {
+      const wallTv = this.getWallTv32();
+      if (wallTv) {
+        wallTv.place(this.batch, x, y, z, ry);
+        return;
+      }
+    }
+
+    if (realisticTv55) {
+      const tv55 = this.getTv55();
+      if (tv55) {
+        tv55.place(this.batch, x, y, z, ry, (options as TvOptions).mount);
+        return;
+      }
+    }
+
     const drawer = DRAWERS[kind] as (b: StaticBatch, m: Materials, o: ProductOptionsMap[K]) => void;
     this.batch.group(x, y, z, ry, () => drawer(this.batch, this.materials, options));
+  }
+
+  private getWallTv32(): WallTv32Resource | null {
+    if (this.wallTv32 === undefined) {
+      this.wallTv32 = createWallTv32Resource();
+    }
+    return this.wallTv32;
+  }
+
+  private getTv55(): Tv55Resource | null {
+    if (this.tv55) return this.tv55;
+    if (this.tv55Unavailable || !this.tv55Asset) return null;
+
+    try {
+      this.tv55 = new Tv55Resource(this.tv55Asset);
+    } catch (error) {
+      this.tv55Unavailable = true;
+      console.warn('No se pudo preparar el modelo de TV de 55"; se usa el fallback:', error);
+    }
+    return this.tv55;
+  }
+
+  /** Actualiza la alternancia compartida de las pantallas de 32" y 55". */
+  animate(now: number): void {
+    this.tv55?.animate(now);
+    this.wallTv32?.animate(now);
+  }
+
+  /** Libera los materiales y texturas de los modelos realistas. */
+  dispose(): void {
+    this.tv55?.dispose();
+    this.tv55 = null;
+    this.tv55Asset = null;
+    this.wallTv32?.dispose();
+    this.wallTv32 = null;
+  }
+
+  /** Devuelve el `specId` del televisor más cercano que intersecta el rayo. */
+  pickTv(ray: THREE.Ray): string | null {
+    const point = new THREE.Vector3();
+    let bestId: string | null = null;
+    let bestDistance = Infinity;
+    for (const hit of this.tvHits) {
+      const intersection = ray.intersectBox(hit.box, point);
+      if (!intersection) {
+        continue;
+      }
+      const distance = intersection.distanceTo(ray.origin);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestId = hit.specId;
+      }
+    }
+    return bestId;
   }
 }

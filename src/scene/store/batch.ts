@@ -94,6 +94,36 @@ export class StaticBatch {
     object.matrixAutoUpdate = false;
   }
 
+  /**
+   * Fusiona un objeto jerárquico (una plantilla de modelo) en el batch estático,
+   * conservando su transformación interna y la de la pila actual.
+   */
+  mergeObject(
+    object: THREE.Object3D,
+    x: number,
+    y: number,
+    z: number,
+    ry = 0,
+    sx = 1,
+    sy = 1,
+    sz = 1,
+  ): void {
+    const base = this.worldMatrix(x, y, z, ry, sx, sy, sz);
+    const world = new THREE.Matrix4();
+    object.updateMatrixWorld(true);
+
+    object.traverse((child) => {
+      if (!(child instanceof THREE.Mesh)) return;
+      if (Array.isArray(child.material)) {
+        throw new Error('StaticBatch.mergeObject() no admite materiales por grupos.');
+      }
+      const geometry = child.geometry.clone();
+      world.multiplyMatrices(base, child.matrixWorld);
+      geometry.applyMatrix4(world);
+      this.addGeometry(geometry, child.material);
+    });
+  }
+
   // ---------------------------------------------------------------- primitivas
 
   private base(key: string, create: () => THREE.BufferGeometry): THREE.BufferGeometry {
@@ -125,19 +155,22 @@ export class StaticBatch {
 
     const instance = geometry.clone();
     instance.applyMatrix4(this.scratchWorld);
+    this.addGeometry(instance, material);
+  }
 
+  private addGeometry(geometry: THREE.BufferGeometry, material: THREE.Material): void {
     let list = this.buckets.get(material);
     if (!list) {
       list = [];
       this.buckets.set(material, list);
     }
-    list.push(instance);
+    list.push(geometry);
     this.primitiveCount += 1;
 
     if (this.bounds) {
-      instance.computeBoundingBox();
-      if (instance.boundingBox) {
-        this.bounds.push({ label: this.label, box: instance.boundingBox.clone() });
+      geometry.computeBoundingBox();
+      if (geometry.boundingBox) {
+        this.bounds.push({ label: this.label, box: geometry.boundingBox.clone() });
       }
     }
   }

@@ -44,7 +44,7 @@ export function drawShelfUnit(b: StaticBatch, m: Materials, o: ShelfUnitOptions)
     b.box(m.whiteGloss, o.w - 0.1, 0.035, o.d, 0, y, 0);
   }
   b.box(m.graphite, o.w, 0.05, o.d, 0, o.h + 0.025, 0);
-  b.box(m.red, o.w, 0.04, 0.02, 0, o.h - 0.1, o.d / 2 - 0.01);
+  b.box(m.red, o.w - 0.1, 0.04, 0.02, 0, o.h - 0.1, o.d / 2 - 0.01);
 }
 
 const CARTON_MATERIALS = ['boxWhite', 'boxWhite', 'boxGray', 'boxGraphite', 'cardboard'] as const;

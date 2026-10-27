@@ -1,20 +1,31 @@
+import * as THREE from 'three';
 import { Camera } from './core/camera';
 import { Renderer } from './core/renderer';
 import { createControls } from './core/controls';
+import { getTvSpec } from './data/tvSpecs';
 import { StoreScene } from './scene/store/storeScene';
 import { applyStoreCamera, updateStoreFov } from './scene/store/storeCamera';
+import { createTvCard } from './ui/tvCard';
+import { loadTv55Asset, type Tv55Asset } from './ui/tv/tv55Assets';
 
 const canvas = document.getElementById('scene') as HTMLCanvasElement;
 
 const camera = new Camera();
 const renderer = new Renderer(canvas);
 
-runStore();
+void runStore();
 
-function runStore(): void {
+async function runStore(): Promise<void> {
+  let tv55Asset: Tv55Asset | null = null;
+  try {
+    tv55Asset = await loadTv55Asset();
+  } catch (error) {
+    console.warn('No se pudo cargar el modelo de TV de 55"; se usa el fallback:', error);
+  }
+
   let store: StoreScene;
   try {
-    store = new StoreScene();
+    store = new StoreScene({ tv55Asset });
   } catch (error) {
     console.error('No se pudo construir la tienda 3D:', error);
     showError('No se pudo construir la tienda 3D. Revisa la consola del navegador.');
@@ -24,7 +35,30 @@ function runStore(): void {
   applyStoreCamera(camera.camera);
   renderer.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 
-  const controls = createControls(camera.camera, renderer.renderer);
+  const raycaster = new THREE.Raycaster();
+  const pointer = new THREE.Vector2();
+
+  function pickTvAt(clientX: number, clientY: number) {
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return null;
+    pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+    pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(pointer, camera.camera);
+    const specId = store.pickTv(raycaster.ray);
+    return specId ? getTvSpec(specId) ?? null : null;
+  }
+
+  const tvCard = createTvCard({ onSceneTap: pickTvAt });
+
+  function onTap(clientX: number, clientY: number): void {
+    const spec = pickTvAt(clientX, clientY);
+    if (spec) tvCard.open(spec);
+  }
+
+  const controls = createControls(camera.camera, renderer.renderer, {
+    isBlocked: () => tvCard.isOpen(),
+    onTap,
+  });
 
   let lastTime = performance.now();
 
@@ -35,6 +69,7 @@ function runStore(): void {
     lastTime = currentTime;
 
     controls.update(delta);
+    store.animate(currentTime);
 
     renderer.renderer.render(store.scene, camera.camera);
   }
