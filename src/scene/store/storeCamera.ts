@@ -14,12 +14,15 @@ export function applyStoreCamera(camera: THREE.PerspectiveCamera): void {
 }
 
 /**
- * Campo de visión vertical adaptado a la pantalla: en horizontal 70°; en vertical
- * (teléfono) se amplía hasta 100° para no perder los laterales de la tienda.
+ * Campo de visión vertical adaptado a la pantalla: en horizontal conserva el valor base;
+ * en vertical (teléfono) se amplía hasta 100° para no perder los laterales de la tienda.
  */
+export function storeFovForAspect(aspect: number, baseFov = 70): number {
+  return aspect >= 1.4 ? baseFov : Math.min(100, baseFov + (1.4 - aspect) * 45);
+}
+
+/** Aplica a la cámara la política de FOV actual de la tienda. */
 export function updateStoreFov(camera: THREE.PerspectiveCamera): void {
-  const base = 70;
-  const aspect = camera.aspect;
-  camera.fov = aspect >= 1.4 ? base : Math.min(100, base + (1.4 - aspect) * 45);
+  camera.fov = storeFovForAspect(camera.aspect, 70);
   camera.updateProjectionMatrix();
 }

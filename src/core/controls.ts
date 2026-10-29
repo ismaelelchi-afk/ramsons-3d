@@ -6,10 +6,17 @@ export interface ControlOptions {
   isBlocked?: () => boolean;
   /** Toque/clic corto sobre la escena (no arrastre) en coordenadas de pantalla. */
   onTap?: (clientX: number, clientY: number) => void;
+  /** Mientras devuelva true se ignora la mirada comercial sin bloquear toques. */
+  isCommercialLookBlocked?: () => boolean;
 }
 
 export interface FreeControls {
   update(delta: number): void;
+  updateCommercialLook(delta: number): void;
+  setEnabled(enabled: boolean): void;
+  setCommercialLookEnabled(enabled: boolean): void;
+  cancelCommercialLook(): void;
+  syncFromCamera(): void;
   dispose(): void;
 }
 
@@ -23,6 +30,7 @@ const JOY_DEADZONE = 0.12;
 const KNOB_TRAVEL = 0.6;
 const TAP_MAX_MOVE = 8;
 const TAP_MAX_DURATION = 600;
+const LOOK_SETTLE_EPSILON = 0.0005;
 
 const MARGIN = 0.5;
 const MIN_X = -STORE.halfW + STORE.wallThickness + MARGIN;
@@ -57,6 +65,10 @@ export function createControls(
   let moveZ = 0;
   let upHeld = false;
   let downHeld = false;
+  let enabled = false;
+  let commercialLookEnabled = false;
+  let commercialLookActive = false;
+  let lookMode: 'free' | 'commercial' | null = null;
 
   const velocity = new THREE.Vector3();
   const desired = new THREE.Vector3();
@@ -92,6 +104,18 @@ export function createControls(
 
   lookLayer.addEventListener('pointerdown', (event) => {
     if (options.isBlocked?.() || lookPointer !== null) return;
+    if (!enabled && !commercialLookEnabled) return;
+
+    if (enabled) {
+      lookMode = 'free';
+    } else if (!options.isCommercialLookBlocked?.()) {
+      syncFromCamera();
+      lookMode = 'commercial';
+      commercialLookActive = true;
+    } else {
+      lookMode = null;
+    }
+
     lookPointer = event.pointerId;
     lookX = event.clientX;
     lookY = event.clientY;
@@ -114,7 +138,12 @@ export function createControls(
     ) {
       tapMoved = true;
     }
-    if (options.isBlocked?.()) return;
+
+    const canLook =
+      (lookMode === 'free' && enabled) ||
+      (lookMode === 'commercial' && commercialLookEnabled);
+    if (!canLook || options.isBlocked?.()) return;
+
     targetYaw -= dx * LOOK_SENSITIVITY;
     targetPitch = clamp(targetPitch - dy * LOOK_SENSITIVITY, -MAX_PITCH, MAX_PITCH);
   });
@@ -122,6 +151,7 @@ export function createControls(
   function endLook(event: PointerEvent): void {
     if (event.pointerId !== lookPointer) return;
     lookPointer = null;
+    lookMode = null;
   }
 
   lookLayer.addEventListener('pointerup', (event) => {
@@ -134,6 +164,12 @@ export function createControls(
     }
   });
   lookLayer.addEventListener('pointercancel', endLook);
+  lookLayer.addEventListener('lostpointercapture', (event) => {
+    if (event.pointerId === lookPointer) {
+      lookPointer = null;
+      lookMode = null;
+    }
+  });
 
   let joyPointer: number | null = null;
   let joyCenterX = 0;
@@ -157,7 +193,7 @@ export function createControls(
   }
 
   joystick.addEventListener('pointerdown', (event) => {
-    if (options.isBlocked?.() || joyPointer !== null) return;
+    if (!enabled || options.isBlocked?.() || joyPointer !== null) return;
     event.stopPropagation();
     const rect = joystick.getBoundingClientRect();
     joyCenterX = rect.left + rect.width / 2;
@@ -182,23 +218,131 @@ export function createControls(
   }
   joystick.addEventListener('pointerup', endJoystick);
   joystick.addEventListener('pointercancel', endJoystick);
+  joystick.addEventListener('lostpointercapture', endJoystick);
 
   function bindHold(element: HTMLElement, setHeld: (held: boolean) => void): void {
+    let pointerId: number | null = null;
+
     element.addEventListener('pointerdown', (event) => {
-      if (options.isBlocked?.()) return;
+      if (!enabled || options.isBlocked?.() || pointerId !== null) return;
       event.stopPropagation();
+      pointerId = event.pointerId;
       element.setPointerCapture(event.pointerId);
       setHeld(true);
     });
     const release = (event: PointerEvent): void => {
+      if (event.pointerId !== pointerId) return;
+      pointerId = null;
       event.stopPropagation();
       setHeld(false);
     };
     element.addEventListener('pointerup', release);
     element.addEventListener('pointercancel', release);
+    element.addEventListener('lostpointercapture', release);
   }
   bindHold(upButton, (held) => { upHeld = held });
   bindHold(downButton, (held) => { downHeld = held });
+
+  function cancelActiveInputs(): void {
+    const lookId = lookPointer;
+    lookPointer = null;
+    lookMode = null;
+    commercialLookActive = false;
+    if (lookId !== null && lookLayer.hasPointerCapture(lookId)) {
+      lookLayer.releasePointerCapture(lookId);
+    }
+
+    const joyId = joyPointer;
+    joyPointer = null;
+    if (joyId !== null && joystick.hasPointerCapture(joyId)) {
+      joystick.releasePointerCapture(joyId);
+    }
+    knob.style.transform = 'translate(-50%, -50%)';
+    moveX = 0;
+    moveZ = 0;
+    upHeld = false;
+    downHeld = false;
+    velocity.set(0, 0, 0);
+  }
+
+  function syncFromCamera(): void {
+    yaw = camera.rotation.y;
+    pitch = clamp(camera.rotation.x, -MAX_PITCH, MAX_PITCH);
+    targetYaw = yaw;
+    targetPitch = pitch;
+    velocity.set(0, 0, 0);
+  }
+
+  function setEnabled(nextEnabled: boolean): void {
+    if (nextEnabled === enabled) return;
+
+    cancelActiveInputs();
+    if (nextEnabled) {
+      syncFromCamera();
+    }
+    enabled = nextEnabled;
+  }
+
+  function setCommercialLookEnabled(nextEnabled: boolean): void {
+    if (nextEnabled === commercialLookEnabled) return;
+
+    commercialLookEnabled = nextEnabled;
+    commercialLookActive = false;
+    if (lookMode === 'commercial') {
+      const lookId = lookPointer;
+      lookPointer = null;
+      lookMode = null;
+      if (lookId !== null && lookLayer.hasPointerCapture(lookId)) {
+        lookLayer.releasePointerCapture(lookId);
+      }
+    }
+    syncFromCamera();
+  }
+
+  function cancelCommercialLook(): void {
+    commercialLookActive = false;
+    if (lookMode === 'commercial') {
+      const lookId = lookPointer;
+      lookPointer = null;
+      lookMode = null;
+      if (lookId !== null && lookLayer.hasPointerCapture(lookId)) {
+        lookLayer.releasePointerCapture(lookId);
+      }
+    }
+    syncFromCamera();
+  }
+
+  function updateCommercialLook(delta: number): void {
+    if (
+      !commercialLookEnabled ||
+      !commercialLookActive ||
+      options.isBlocked?.() ||
+      options.isCommercialLookBlocked?.()
+    ) {
+      return;
+    }
+
+    const dt = Math.min(delta, 0.1);
+    const lookK = 1 - Math.exp(-LOOK_SMOOTH * dt);
+    yaw += (targetYaw - yaw) * lookK;
+    pitch += (targetPitch - pitch) * lookK;
+    camera.rotation.x = pitch;
+    camera.rotation.y = yaw;
+    camera.rotation.z = 0;
+
+    if (
+      lookPointer === null &&
+      Math.abs(targetYaw - yaw) < LOOK_SETTLE_EPSILON &&
+      Math.abs(targetPitch - pitch) < LOOK_SETTLE_EPSILON
+    ) {
+      yaw = targetYaw;
+      pitch = targetPitch;
+      camera.rotation.x = pitch;
+      camera.rotation.y = yaw;
+      camera.rotation.z = 0;
+      commercialLookActive = false;
+    }
+  }
 
   function clampPosition(point: THREE.Vector3): void {
     point.x = clamp(point.x, MIN_X, MAX_X);
@@ -207,7 +351,7 @@ export function createControls(
   }
 
   function update(delta: number): void {
-    if (options.isBlocked?.()) {
+    if (!enabled || options.isBlocked?.()) {
       velocity.set(0, 0, 0);
       moveX = 0;
       moveZ = 0;
@@ -266,5 +410,13 @@ export function createControls(
     downButton.remove();
   }
 
-  return { update, dispose };
+  return {
+    update,
+    updateCommercialLook,
+    setEnabled,
+    setCommercialLookEnabled,
+    cancelCommercialLook,
+    syncFromCamera,
+    dispose,
+  };
 }
