@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>RAMSTORE3D | RAMSONS</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <canvas id="scene"></canvas>
+    <div class="store-brand" aria-label="RAMSONS. Cada dia mais você.">
+      <span class="store-brand-mark" id="brand-monogram" aria-hidden="true">R</span>
+      <span class="store-brand-copy">
+        <span class="store-brand-name">RAMSONS</span>
+        <span class="store-brand-tagline">Cada dia mais você</span>
+      </span>
+    </div>
+    <button
+      id="free-camera-exit"
+      class="free-exit"
+      type="button"
+      aria-label="Sair do modo câmera livre"
+      hidden
+    >
+      Sair
+    </button>
+    <nav
+      id="commercial-nav"
+      class="commercial-nav"
+      aria-label="Navegação por zonas da loja"
+      hidden
+    ></nav>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
